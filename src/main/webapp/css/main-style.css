@@ -1,0 +1,9 @@
+.z-label.title {
+	font-size: 28px;
+	font-weight: bold;
+}
+
+.z-div.frame,
+.z-vlayout.frame {
+	padding: 10px 10px 16px 10px;
+}
