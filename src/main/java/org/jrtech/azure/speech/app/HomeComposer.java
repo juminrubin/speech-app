@@ -1,12 +1,16 @@
 package org.jrtech.azure.speech.app;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Locale;
 
-import org.jrtech.azure.speech.helper.SpeechTranscriberHelper;
+import org.jrtech.azure.speech.helper.AbstractSpeechTranscriberHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StopWatch;
@@ -40,58 +44,46 @@ public class HomeComposer extends GenericForwardComposer<Vlayout> {
 
 	private Combobox language;
 
-	private URI uploadedAudioFileUri;
-
+	private File uploadedAudioFile = null;
+	
+	private final NumberFormat nf = NumberFormat.getIntegerInstance(Locale.ENGLISH);
+	
+	private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");  
+	
 	@Override
 	public void doAfterCompose(Vlayout comp) throws Exception {
 		super.doAfterCompose(comp);
 	}
 
 	public void onUpload$uploadButton(UploadEvent event) {
-		final SpeechTranscriberHelper speechServiceHelper = new SpeechTranscriberHelper(serviceKey.getText(), serviceRegion.getText());
-		final NumberFormat nf = NumberFormat.getIntegerInstance(Locale.ENGLISH);
+		uploadedAudioFile = null;
 		if (event.getMedias() != null) {
 			for (Media media : event.getMedias()) {
-//				File tempFile;
-//				try {
-//					tempFile = File.createTempFile("speech-", "." + media.getFormat());
-//				} catch (IOException ex) {
-//					LOGGER.error("Fail to create temp file.", ex);
-//					break;
-//				}
-//
-//				try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-//					int read;
-//					byte[] bytes = new byte[DEFAULT_BUFFER_SIZE];
-//					final InputStream is = media.getStreamData();
-//					while ((read = is.read(bytes)) != -1) {
-//						fos.write(bytes, 0, read);
-//					}
-//				} catch (IOException ex) {
-//					LOGGER.error("Fail to process to temp file.", ex);
-//					break;
-//				}
+				try {
+					uploadedAudioFile = File.createTempFile("speech-", "." + media.getFormat());
+				} catch (IOException ex) {
+					LOGGER.error("Fail to create temp file.", ex);
+					break;
+				}
+
+				try (FileOutputStream fos = new FileOutputStream(uploadedAudioFile)) {
+					int read;
+					byte[] bytes = new byte[DEFAULT_BUFFER_SIZE];
+					final InputStream is = media.getStreamData();
+					while ((read = is.read(bytes)) != -1) {
+						fos.write(bytes, 0, read);
+					}
+				} catch (IOException ex) {
+					LOGGER.error("Fail to process to temp file.", ex);
+					break;
+				}
 				
 				audioFile.setValue(media.getName());
-//				audioFile.setAttribute(VAR_AUDIO_TEMP_FILE_URI, tempFile.toURI().toString());
 				
-//				writeToConsoleLog("Uploading '" + media.getName() + "' to a temporary file: " + tempFile.toURI().toString());
-//				writeToConsoleLog("Content Type: " + media.getContentType());
-//				writeToConsoleLog("Format: " + media.getFormat());
-				StopWatch sw = new StopWatch();
-				try (final InputStream is = media.getStreamData()) {
-					sw.start();
-					String textTranscription = speechServiceHelper.transcribe(is);
-					sw.stop();
-					writeToConsoleLog("Transcription result within " + nf.format(sw.getLastTaskTimeMillis()) + " ms.:\n" + textTranscription);
-					writeToConsoleLog("Processing log:\n" + speechServiceHelper.getServiceLog());
-					speechServiceHelper.resetServiceLog();
-					
-				} catch (IOException | InterruptedException e) {
-					final String message = "Failure in transcribing audio media: " + media.getName() + " (" + media.getFormat() + ")";
-					LOGGER.error(message, e);
-					Messagebox.show(message, "Processing Failure", Messagebox.OK, Messagebox.ERROR);
-				}
+				writeToConsoleLog("Uploading '" + media.getName() + "' to a temporary file: " + uploadedAudioFile.toURI().toString());
+				writeToConsoleLog("Content Type: " + media.getContentType());
+				writeToConsoleLog("Format: " + media.getFormat());
+
 				
 				// only take 1 media
 				break;
@@ -106,9 +98,28 @@ public class HomeComposer extends GenericForwardComposer<Vlayout> {
 		consoleLog.setText(consoleLog.getText() + text);
 	}
 
-//	public void onClick$transcribeButton(MouseEvent event) {
-//		Messagebox.show("Under construction");
-//	}
+	public void onClick$transcribeButton(MouseEvent event) {
+		if (uploadedAudioFile == null) {
+			Messagebox.show("No audio file uploaded in system. Please upload an Audio file to allow transcription.");
+			return;
+		}
+		
+		final AbstractSpeechTranscriberHelper speechServiceHelper = AbstractSpeechTranscriberHelper.getSpeechTranscriberHelperByRegion(serviceKey.getText(), serviceRegion.getText());
+
+		StopWatch sw = new StopWatch();
+		try (final InputStream is = new FileInputStream(uploadedAudioFile)) {
+			sw.start();
+			String textTranscription = speechServiceHelper.transcribe(is, language.getText());
+			sw.stop();
+			writeToConsoleLog("\n" + df.format(Calendar.getInstance().getTime()) + " Transcription result within " + nf.format(sw.getLastTaskTimeMillis()) + " ms.:\n" + textTranscription);
+			writeToConsoleLog("Processing log:\n" + speechServiceHelper.getServiceLog());
+			speechServiceHelper.resetServiceLog();
+		} catch (Exception e) {
+			final String message = "Failure in transcribing audio media: " + uploadedAudioFile.getName();
+			LOGGER.error(message, e);
+			Messagebox.show(message, "Processing Failure", Messagebox.OK, Messagebox.ERROR);
+		}
+	}
 	
 	public void onClick$clearConsoleButton(MouseEvent event) {
 		consoleLog.setText("");

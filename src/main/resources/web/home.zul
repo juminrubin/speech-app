@@ -35,8 +35,8 @@
 							<comboitem label="de-CH" value="de-CH" />
 						</combobox>
 						<!-- 
-						<button id="transcribeButton" label="Transcribe Audio" />
 						 -->
+						<button id="transcribeButton" label="Transcribe Audio" />
 					</hlayout>
 				</row>
 			</rows>

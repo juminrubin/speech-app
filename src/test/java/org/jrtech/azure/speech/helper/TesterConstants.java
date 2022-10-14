@@ -6,6 +6,6 @@ public class TesterConstants {
 
 	public static final String REGION_WEU = "westeurope";
 	
-	public static final String SERVICE_ENDPOINT = "https://westeurope.api.cognitive.microsoft.com/sts/v1.0/issuetoken";
+	public static final String SERVICE_ENDPOINT = "wss://westeurope.api.cognitive.microsoft.com/stt/speech/recognition/conversation/cognitiveservices/v1";
 
 }

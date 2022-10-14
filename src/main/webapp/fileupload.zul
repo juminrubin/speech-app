@@ -1,8 +1,0 @@
-<zk>
-  <window border="normal" title="hello" apply="org.jrtech.azure.speech.app.FileUploadComposer">
-  	
-  	<div>Multifile upload demo!</div>
-  	
-	<button id="btn" label="Upload some files!" upload="true,maxsize=-1,multiple=true"/>
-  </window>
-</zk>
